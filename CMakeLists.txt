@@ -44,6 +44,8 @@ else()
     else()
         add_executable(QTCamController
             ${PROJECT_SOURCES}
+            cameralistmodel.h cameralistmodel.cpp
+            .gitignore
         )
     endif()
 endif()

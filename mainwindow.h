@@ -20,11 +20,15 @@ public:
 private slots:
     void processCapturedImage(int requestId, const QImage &img);
     int displayCapturedImage(int requestId, const QImage &img);
-     void capture();
+    void capture();
+    void selectCamera();
+
 
 private:
-    void setupCamera();
+    void updateCameraList();
+    void setupTimer();
     void thresh_callback(int, void* );
+
 private:
     Ui::MainWindow *ui;
     class QCamera *camera;

@@ -5,6 +5,7 @@
 #include <QBuffer>
 #include <QCameraViewfinder>
 #include <QTimer>
+#include <QComboBox>
 
 #include <opencv2/opencv.hpp>
 #include "opencv2/imgcodecs.hpp"
@@ -12,6 +13,7 @@
 #include "opencv2/imgproc.hpp"
 
 #include "mainwindow.h"
+#include "cameralistmodel.h"
 #include "./ui_mainwindow.h"
 
 using namespace cv;
@@ -27,13 +29,8 @@ MainWindow::MainWindow(QWidget *parent)
     , ui(new Ui::MainWindow)
 {
     ui->setupUi(this);
-    setupCamera();
-
-    timer = new QTimer(this);
-    connect(timer, &QTimer::timeout, this,&MainWindow::capture);
-    timer->setInterval(5000);
-    timer->start(5000);
-
+    updateCameraList();
+    setupTimer();
 }
 
 MainWindow::~MainWindow()
@@ -42,24 +39,37 @@ MainWindow::~MainWindow()
 }
 
 
-void MainWindow::setupCamera()
+void MainWindow::updateCameraList()
 {
     const QList<QCameraInfo> cameras = QCameraInfo::availableCameras();
-    QString names = "";
-    foreach (QCameraInfo cameraInfo, cameras) {
-        names += cameraInfo.deviceName() + "\n";
-        //Tu cherches la camera qui a le nom qu'on a choisi :
-        //if (cameraInfo.deviceName() == "mycamera")
-        camera = new QCamera(this);
-    }
-    // camera->setViewfinder(ui->viewfinder);
+    CameraListModel* listModel = new CameraListModel(cameras);
+    ui->comboBox->setModel(listModel);
+}
 
+void MainWindow::setupTimer()
+{
+    timer = new QTimer(this);
+    connect(timer, &QTimer::timeout, this,&MainWindow::capture);
+    timer->setInterval(500);
+}
+
+void MainWindow::selectCamera()
+{
+    // foreach (QCameraInfo cameraInfo, cameras) {
+    //     names += cameraInfo.deviceName() + "\n";
+    //     //Tu cherches la camera qui a le nom qu'on a choisi :
+    //     //if (cameraInfo.deviceName() == "mycamera")
+
+    // }
+    // camera->setViewfinder(ui->viewfinder);
+    auto infos =  ((CameraListModel*)(ui->comboBox->model()))->cameraInfo(ui->comboBox->currentIndex());
+    camera = new QCamera(infos);
     imageCapture = new QCameraImageCapture(camera);
     camera->setCaptureMode(QCamera::CaptureVideo);
     //connect(imageCapture, &QCameraImageCapture::imageCaptured, this, &MainWindow::processCapturedImage);
 
-    const char* source_window = "Source";
-    namedWindow( source_window );
+    //const char* source_window = "Source";
+    //namedWindow( source_window );
 
     const int max_thresh = 255;
 
@@ -67,6 +77,7 @@ void MainWindow::setupCamera()
     bool done = false;
     connect(imageCapture, &QCameraImageCapture::imageCaptured, this, &MainWindow::displayCapturedImage);
     camera->start();
+    timer->start(200);
 
     // /*
     //     , [=](int id, const QImage &previewImage)
@@ -158,7 +169,7 @@ int MainWindow::displayCapturedImage(int requestId, const QImage &previewImage)
     }
     cv:: Mat resizeMat(cv::Size(cvImage.cols/5, cvImage.rows/5),CV_8UC4);
     cv::resize(cvImage,resizeMat, resizeMat.size(),0,0,INTER_LINEAR);
-    QImage img= QImage((uchar*) resizeMat.data, resizeMat.cols, resizeMat.rows, resizeMat.step, QImage::Format_RGB32);
+    QImage img= QImage((uchar*) resizeMat.data, resizeMat.cols, resizeMat.rows, resizeMat.step, QImage::Format_ARGB32);
     QPixmap pixel = QPixmap::fromImage(img);
     ui->displayImage->setPixmap(pixel);
     try{
@@ -187,6 +198,7 @@ void MainWindow::capture()
 }
 
 
+
 void MainWindow::thresh_callback(int, void* )
 {
     Mat canny_output;
@@ -208,6 +220,4 @@ void MainWindow::thresh_callback(int, void* )
     QImage img= QImage((uchar*) drawing.data, drawing.cols, drawing.rows, drawing.step, QImage::Format_RGB888);
     QPixmap pixel = QPixmap::fromImage(img);
     ui->displayImageCleaned->setPixmap(pixel);
-    imshow( "Hull demo", drawing );
-    moveWindow("Hull demo", 20,20);
 }
