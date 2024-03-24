@@ -3,11 +3,18 @@
 
 #include <QMainWindow>
 
+#include "opencv2/core/types.hpp"
+
 QT_BEGIN_NAMESPACE
 namespace Ui {
 class MainWindow;
 }
 QT_END_NAMESPACE
+
+namespace cv {
+class Mat;
+class RNG;
+}
 
 class MainWindow : public QMainWindow
 {
@@ -18,19 +25,27 @@ public:
     ~MainWindow();
 
 private slots:
-    void processCapturedImage(int requestId, const QImage &img);
-    int displayCapturedImage(int requestId, const QImage &img);
-    void capture();
     void selectCamera();
-
+    int displayCapturedImage(int requestId, const QImage &img);
+    void processCapturedImage(int, cv:: Mat& resizeMat);
+    void capture();
+    void changeThreshold(int);
+    void changeSegmentSize(int);
+    void changeMinContourSize(int);
 
 private:
     void updateCameraList();
     void setupTimer();
-    void thresh_callback(int, void* );
 
 private:
     Ui::MainWindow *ui;
+    int m_thresh{100};
+    cv::RNG* rng;
+    std::vector<cv::Scalar*> colors;
+
+    double m_segmentSize {0.1};
+    float m_minContourSize{1.f};
+
     class QCamera *camera;
     class QCameraImageCapture *imageCapture;
     class QTimer *timer ;
